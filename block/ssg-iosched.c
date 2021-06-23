@@ -695,7 +695,7 @@ static void ssg_insert_request(struct blk_mq_hw_ctx *hctx, struct request *rq,
 			return;
 	}
 
-	trace_block_rq_insert(rq);
+	trace_block_rq_insert(rq->q, rq);
 
 	if (at_head || blk_rq_is_passthrough(rq)) {
 		if (at_head)

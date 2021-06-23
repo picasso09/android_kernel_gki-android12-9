@@ -2250,9 +2250,9 @@ static bool bfq_bio_merge(struct request_queue *q, struct bio *bio,
 
 	ret = blk_mq_sched_try_merge(q, bio, nr_segs, &free);
 
+	spin_unlock_irq(&bfqd->lock);
 	if (free)
 		blk_mq_free_request(free);
-	spin_unlock_irq(&bfqd->lock);
 
 	return ret;
 }
@@ -5521,18 +5521,19 @@ static void bfq_insert_request(struct blk_mq_hw_ctx *hctx, struct request *rq,
 {
 	struct request_queue *q = hctx->queue;
 	struct bfq_data *bfqd = q->elevator->elevator_data;
-	struct bfq_queue *bfqq;
+	struct bfq_queue *bfqq = NULL;
 	bool idle_timer_disabled = false;
 	unsigned int cmd_flags;
+	LIST_HEAD(free);
 
 #ifdef CONFIG_BFQ_GROUP_IOSCHED
 	if (!cgroup_subsys_on_dfl(io_cgrp_subsys) && rq->bio)
 		bfqg_stats_update_legacy_io(q, rq);
 #endif
 	spin_lock_irq(&bfqd->lock);
-	bfqq = bfq_init_rq(rq);
-	if (blk_mq_sched_try_insert_merge(q, rq)) {
+	if (blk_mq_sched_try_insert_merge(q, rq, &free)) {
 		spin_unlock_irq(&bfqd->lock);
+		blk_mq_free_requests(&free);
 		return;
 	}
 
@@ -6121,7 +6122,7 @@ static void bfq_prepare_request(struct request *rq)
  * rq after rq has been inserted or merged. So, it is safe to execute
  * these preparation operations when rq is finally inserted or merged.
  */
-static struct bfq_queue *bfq_init_rq(struct request *rq)
+static __maybe_unused struct bfq_queue *bfq_init_rq(struct request *rq)
 {
 	struct request_queue *q = rq->q;
 	struct bio *bio = rq->bio;

@@ -504,7 +504,7 @@ config TCP_CONG_CUBIC
 
 config TCP_CONG_WESTWOOD
 	tristate "TCP Westwood+"
-	default m
+	default y
 	help
 	  TCP Westwood+ is a sender-side only modification of the TCP Reno
 	  protocol stack that optimizes the performance of TCP congestion
@@ -681,7 +681,7 @@ config TCP_CONG_BBR
 
 choice
 	prompt "Default TCP congestion control"
-	default DEFAULT_CUBIC
+	default DEFAULT_WESTWOOD
 	help
 	  Select the TCP congestion control that will be used by default
 	  for all connections.
@@ -727,6 +727,10 @@ config TCP_CONG_CUBIC
 	depends on !TCP_CONG_ADVANCED
 	default y
 
+config TCP_CONG_WESTWOOD
+        tristate
+        default y
+
 config DEFAULT_TCP_CONG
 	string
 	default "bic" if DEFAULT_BIC
@@ -740,7 +744,7 @@ config DEFAULT_TCP_CONG
 	default "dctcp" if DEFAULT_DCTCP
 	default "cdg" if DEFAULT_CDG
 	default "bbr" if DEFAULT_BBR
-	default "cubic"
+	default "westwood"
 
 config TCP_MD5SIG
 	bool "TCP: MD5 Signature Option support (RFC2385)"

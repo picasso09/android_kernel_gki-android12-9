@@ -832,7 +832,7 @@ bool acpi_dev_present(const char *hid, const char *uid, s64 hrv)
 	struct acpi_dev_match_info match = {};
 	struct device *dev;
 
-	strlcpy(match.hid[0].id, hid, sizeof(match.hid[0].id));
+	strscpy(match.hid[0].id, hid, sizeof(match.hid[0].id));
 	match.uid = uid;
 	match.hrv = hrv;
 
@@ -841,6 +841,36 @@ bool acpi_dev_present(const char *hid, const char *uid, s64 hrv)
 	return !!dev;
 }
 EXPORT_SYMBOL(acpi_dev_present);
+
+/**
+ * acpi_dev_get_next_match_dev - Return the next match of ACPI device
+ * @adev: Pointer to the previous acpi_device matching this @hid, @uid and @hrv
+ * @hid: Hardware ID of the device.
+ * @uid: Unique ID of the device, pass NULL to not check _UID
+ * @hrv: Hardware Revision of the device, pass -1 to not check _HRV
+ *
+ * Return the next match of ACPI device if another matching device was present
+ * at the moment of invocation, or NULL otherwise.
+ *
+ * The caller is responsible to call put_device() on the returned device.
+ *
+ * See additional information in acpi_dev_present() as well.
+ */
+struct acpi_device *
+acpi_dev_get_next_match_dev(struct acpi_device *adev, const char *hid, const char *uid, s64 hrv)
+{
+	struct device *start = adev ? &adev->dev : NULL;
+	struct acpi_dev_match_info match = {};
+	struct device *dev;
+
+	strscpy(match.hid[0].id, hid, sizeof(match.hid[0].id));
+	match.uid = uid;
+	match.hrv = hrv;
+
+	dev = bus_find_device(&acpi_bus_type, start, &match, acpi_dev_match_cb);
+	return dev ? to_acpi_device(dev) : NULL;
+}
+EXPORT_SYMBOL(acpi_dev_get_next_match_dev);
 
 /**
  * acpi_dev_get_first_match_dev - Return the first match of ACPI device
@@ -858,15 +888,7 @@ EXPORT_SYMBOL(acpi_dev_present);
 struct acpi_device *
 acpi_dev_get_first_match_dev(const char *hid, const char *uid, s64 hrv)
 {
-	struct acpi_dev_match_info match = {};
-	struct device *dev;
-
-	strlcpy(match.hid[0].id, hid, sizeof(match.hid[0].id));
-	match.uid = uid;
-	match.hrv = hrv;
-
-	dev = bus_find_device(&acpi_bus_type, NULL, &match, acpi_dev_match_cb);
-	return dev ? to_acpi_device(dev) : NULL;
+	return acpi_dev_get_next_match_dev(NULL, hid, uid, hrv);
 }
 EXPORT_SYMBOL(acpi_dev_get_first_match_dev);
 
@@ -879,7 +901,7 @@ EXPORT_SYMBOL(acpi_video_backlight_string);
 
 static int __init acpi_backlight(char *str)
 {
-	strlcpy(acpi_video_backlight_string, str,
+	strscpy(acpi_video_backlight_string, str,
 		sizeof(acpi_video_backlight_string));
 	return 1;
 }
